@@ -205,6 +205,14 @@ func TestRequestCreate(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestRequestRealpath(t *testing.T) {
+	p := clientRequestServerPair(t)
+	defer p.Close()
+	wd, err := p.cli.Getwd()
+	assert.Nil(t, err)
+	assert.Equal(t, wd, "/home/user")
+}
+
 func TestRequestMkdir(t *testing.T) {
 	p := clientRequestServerPair(t)
 	defer p.Close()
@@ -363,7 +371,7 @@ func TestRequestReaddir(t *testing.T) {
 	assert.Equal(t, os.ErrNotExist, err)
 	di, err := p.cli.ReadDir("/")
 	assert.Nil(t, err)
-	assert.Len(t, di, 100)
+	assert.Len(t, di, 101)
 	names := []string{di[18].Name(), di[81].Name()}
 	assert.Equal(t, []string{"foo_18", "foo_81"}, names)
 }

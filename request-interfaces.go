@@ -53,3 +53,9 @@ type FileLister interface {
 type ListerAt interface {
 	ListAt([]os.FileInfo, int64) (int, error)
 }
+
+// Realpather should return a string with the resolved path or an error if the path is invalid
+// Used for answering PWD requests from the client.
+type Realpather interface {
+	Realpath(*Request) (string, error)
+}

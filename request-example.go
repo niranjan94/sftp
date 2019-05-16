@@ -16,13 +16,23 @@ import (
 	"time"
 )
 
-// InMemHandler returns a Hanlders object with the test handlers.
+// InMemHandler returns a Handlers object with the test handlers.
 func InMemHandler() Handlers {
 	root := &root{
-		files: make(map[string]*memFile),
+		files: map[string]*memFile{
+			"/home": newMemFile("/home", true),
+			"/home/user": newMemFile("/home/user", true),
+		},
 	}
 	root.memFile = newMemFile("/", true)
-	return Handlers{root, root, root, root}
+	return Handlers{root, root, root, root, root}
+}
+
+func (fs *root) Realpath(r *Request) (string, error) {
+	if r.Target == "." {
+		return cleanPath("/home/user"), nil
+	}
+	return cleanPath(r.Target), nil
 }
 
 // Example Handlers

@@ -20,6 +20,7 @@ type Handlers struct {
 	FilePut  FileWriter
 	FileCmd  FileCmder
 	FileList FileLister
+	Realpath Realpather
 }
 
 // RequestServer abstracts the sftp protocol with an http request-like protocol
@@ -156,7 +157,9 @@ func (rs *RequestServer) packetWorker(
 			handle := pkt.getHandle()
 			rpkt = statusFromError(pkt, rs.closeRequest(handle))
 		case *sshFxpRealpathPacket:
-			rpkt = cleanPacketPath(pkt)
+			request := requestFromPacket(ctx, pkt)
+			rs.nextRequest(request)
+			rpkt = request.realpath(rs.Handlers, pkt)
 		case *sshFxpOpendirPacket:
 			request := requestFromPacket(ctx, pkt)
 			rs.nextRequest(request)
@@ -194,19 +197,6 @@ func (rs *RequestServer) packetWorker(
 			rs.pktMgr.newOrderedResponse(rpkt, pkt.orderId()))
 	}
 	return nil
-}
-
-// clean and return name packet for file
-func cleanPacketPath(pkt *sshFxpRealpathPacket) responsePacket {
-	path := cleanPath(pkt.getPath())
-	return &sshFxpNamePacket{
-		ID: pkt.id(),
-		NameAttrs: []sshFxpNameAttr{{
-			Name:     path,
-			LongName: path,
-			Attrs:    emptyFileStat,
-		}},
-	}
 }
 
 // Makes sure we have a clean POSIX (/) absolute path to work with

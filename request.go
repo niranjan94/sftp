@@ -49,6 +49,8 @@ func requestFromPacket(ctx context.Context, pkt hasPath) *Request {
 	switch p := pkt.(type) {
 	case *sshFxpOpenPacket:
 		request.Flags = p.Pflags
+	case *sshFxpRealpathPacket:
+		request.Target = p.Path
 	case *sshFxpSetstatPacket:
 		request.Flags = p.Flags
 		request.Attrs = p.Attrs.([]byte)
@@ -202,6 +204,28 @@ func (r *Request) opendir(h Handlers, pkt requestPacket) responsePacket {
 	}
 	return &sshFxpHandlePacket{ID: pkt.id(), Handle: r.handle}
 }
+
+func (r *Request) realpath(h Handlers, pkt requestPacket) responsePacket {
+	var err error
+	r.Method = "Realpath"
+	cleanPath, err := h.Realpath.Realpath(r)
+	if err != nil {
+		switch err.(type) {
+		case syscall.Errno:
+			err = &os.PathError{Path: r.Filepath, Err: err}
+		}
+		return statusFromError(pkt, err)
+	}
+	return &sshFxpNamePacket{
+		ID: pkt.id(),
+		NameAttrs: []sshFxpNameAttr{{
+			Name:     cleanPath,
+			LongName: cleanPath,
+			Attrs:    emptyFileStat,
+		}},
+	}
+}
+
 
 // wrap FileReader handler
 func fileget(h FileReader, r *Request, pkt requestPacket) responsePacket {
@@ -378,6 +402,8 @@ func requestMethod(p requestPacket) (method string) {
 		method = "Readlink"
 	case *sshFxpMkdirPacket:
 		method = "Mkdir"
+	case *sshFxpRealpathPacket:
+		method = "Realpath"
 	}
 	return method
 }
